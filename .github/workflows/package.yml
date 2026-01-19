@@ -25,15 +25,20 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Connect and Publish
+      id: build_push
       run: |
         # Convert repository owner to lowercase to ensure valid docker tag
         OWNER="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
         
-        docker build -t ghcr.io/$OWNER/app-multistage:latest -f docker/Dockerfile.multistage .
-        docker push ghcr.io/$OWNER/app-multistage:latest
+        # Build and Push Multi-stage (Renamed to avoid conflict)
+        docker build -t ghcr.io/$OWNER/python-flask-app-multistage:latest -f docker/Dockerfile.multistage .
+        docker push ghcr.io/$OWNER/python-flask-app-multistage:latest
+        echo "MULTI_STATUS=PASS" >> $GITHUB_ENV
 
-        docker build -t ghcr.io/$OWNER/app-singlestage:latest -f docker/Dockerfile.singlestage .
-        docker push ghcr.io/$OWNER/app-singlestage:latest
+        # Build and Push Single-stage (Renamed to avoid conflict)
+        docker build -t ghcr.io/$OWNER/python-flask-app-singlestage:latest -f docker/Dockerfile.singlestage .
+        docker push ghcr.io/$OWNER/python-flask-app-singlestage:latest
+        echo "SINGLE_STATUS=PASS" >> $GITHUB_ENV
 
     - name: Build Summary
       if: always()
@@ -41,5 +46,15 @@ jobs:
         echo "## Build Summary :package:" >> $GITHUB_STEP_SUMMARY
         echo "| Artifact | Type | Status |" >> $GITHUB_STEP_SUMMARY
         echo "| :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-        echo "| Docker Image | Multi-stage | [OK] Published to GHCR |" >> $GITHUB_STEP_SUMMARY
-        echo "| Docker Image | Single-stage | [OK] Published to GHCR |" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "$MULTI_STATUS" == "PASS" ]; then
+             echo "| Docker Image | Multi-stage | [OK] Published |" >> $GITHUB_STEP_SUMMARY
+        else
+             echo "| Docker Image | Multi-stage | [FAIL] Error |" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        if [ "$SINGLE_STATUS" == "PASS" ]; then
+             echo "| Docker Image | Single-stage | [OK] Published |" >> $GITHUB_STEP_SUMMARY
+        else
+             echo "| Docker Image | Single-stage | [FAIL] Error |" >> $GITHUB_STEP_SUMMARY
+        fi
