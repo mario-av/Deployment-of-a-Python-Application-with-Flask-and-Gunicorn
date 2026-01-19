@@ -1,0 +1,48 @@
+# Stage 1: Builder
+# 1. Define Builder Image
+FROM python:3.11-slim-bullseye as builder
+
+# 2. Set Builder Working Directory
+WORKDIR /app
+
+# 3. Install Git
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
+# 4. Clone Repo and Create Wheels
+RUN git clone https://github.com/Azure-Samples/msdocs-python-flask-webapp-quickstart .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
+
+# Stage 2: Final Image
+# 5. Define Final Base Image
+FROM python:3.11-slim-bullseye
+
+# 6. Metadata
+LABEL version="1.1.0"
+
+# 7. Set Working Directory
+WORKDIR /app
+
+# 8. Copy Built Wheels
+COPY --from=builder /app/wheels /wheels
+COPY --from=builder /app/requirements.txt .
+
+# 9. Install Dependencies from Wheels
+RUN pip install --no-cache-dir /wheels/*
+
+# 10. Copy Application Code
+# We need the code from the builder stage!
+COPY --from=builder /app .
+
+# 11. Ensure WSGI
+COPY config/wsgi.py .
+
+# 12. Create Non-Root User
+RUN useradd -m appuser
+USER appuser
+
+# 13. Expose Port
+EXPOSE 5000
+
+# 14. Run Application
+CMD ["gunicorn", "--workers", "4", "--bind", "0.0.0.0:5000", "wsgi:app"]

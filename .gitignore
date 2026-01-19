@@ -1,0 +1,24 @@
+# Vagrant
+.vagrant/
+*.box
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*~
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Temp
+*.tmp
+*.bak
+
+# Maven build output
+target/
+*.class

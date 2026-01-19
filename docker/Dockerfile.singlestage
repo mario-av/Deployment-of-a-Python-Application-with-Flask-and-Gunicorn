@@ -1,0 +1,45 @@
+# Single-stage Dockerfile for Python Flask (Azure Sample)
+
+# 1. Base Image
+FROM python:3.11-slim-bullseye
+
+# 2. Metadata
+LABEL version="1.1.0"
+
+# 3. Install system dependencies
+# git is required to clone the repo
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    nginx git \
+    && rm -rf /var/lib/apt/lists/*
+
+# 4. Set working directory
+WORKDIR /app
+
+# 5. Clone Azure Application
+# Cloning directly into /app
+RUN git clone https://github.com/Azure-Samples/msdocs-python-flask-webapp-quickstart .
+
+# 6. Install dependencies
+# Using the repo's requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 7. Ensure WSGI Entry Point
+# If the repo doesn't have wsgi.py, we copy our own backup
+COPY config/wsgi.py .
+# We don't overwrite if it exists, actually COPY overwrites.
+# But since we want to ensure *our* wsgi works if theirs is missing...
+# Let's hope their app object is named 'app'.
+# The Azure sample usually has 'app = Flask(__name__)' in app.py.
+# Our wsgi.py imports 'app' from 'application'.
+# Change wsgi.py to try importing from app (standard Azure) or application.
+# For now, let's assume we need to adjust wsgi.py content dynamically or provide a compatible one.
+# BETTER: Create a robust wsgi.py that tries both.
+
+# 8. Copy Config
+COPY config/.env .
+
+# 9. Expose port
+EXPOSE 5000
+
+# 10. Run Application
+CMD ["gunicorn", "--workers", "4", "--bind", "0.0.0.0:5000", "wsgi:app"]

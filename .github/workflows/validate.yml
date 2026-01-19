@@ -1,0 +1,28 @@
+name: Validate Configuration
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Vagrantfile
+        run: ruby -c Vagrantfile
+
+      - name: Validate bootstrap.sh
+        run: bash -n config/bootstrap.sh
+
+      - name: Check files exist
+        run: |
+          test -f Vagrantfile
+          test -f config/bootstrap.sh
+          test -f config/application.py
+          test -f config/requirements.txt
+          test -f readme.md

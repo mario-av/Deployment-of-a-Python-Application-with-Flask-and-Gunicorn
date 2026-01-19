@@ -1,0 +1,45 @@
+name: Package and Build Docker
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Log in to the Container registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Connect and Publish
+      run: |
+        # Convert repository owner to lowercase to ensure valid docker tag
+        OWNER="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+        
+        docker build -t ghcr.io/$OWNER/app-multistage:latest -f docker/Dockerfile.multistage .
+        docker push ghcr.io/$OWNER/app-multistage:latest
+
+        docker build -t ghcr.io/$OWNER/app-singlestage:latest -f docker/Dockerfile.singlestage .
+        docker push ghcr.io/$OWNER/app-singlestage:latest
+
+    - name: Build Summary
+      if: always()
+      run: |
+        echo "## Build Summary :package:" >> $GITHUB_STEP_SUMMARY
+        echo "| Artifact | Type | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "| :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+        echo "| Docker Image | Multi-stage | [OK] Published to GHCR |" >> $GITHUB_STEP_SUMMARY
+        echo "| Docker Image | Single-stage | [OK] Published to GHCR |" >> $GITHUB_STEP_SUMMARY

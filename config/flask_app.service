@@ -1,0 +1,24 @@
+[Unit]
+Description=flask app service - App with Flask and Gunicorn (Azure Sample)
+After=network.target
+[Service]
+User=vagrant
+Group=www-data
+Environment="PATH=/var/www/app/.venv/bin"
+WorkingDirectory=/var/www/app
+# Azure sample might need slightly different workers or timeout, but standard is fine.
+# Instructions said: gunicorn --workers 4 --bind 0.0.0.0:5000 wsgi:app
+# We use unix socket for Nginx, but bind to 0.0.0.0:5000 is for direct access test?
+# The instructions show Nginx config pointing to proxy_pass http://unix:/var/www/app/app.sock;
+# BUT 'Ampliación' text says "Gunicorn debe iniciarse ahora así: ... --bind 0.0.0.0:5000".
+# If we bind ONLY to TCP, Nginx proxy_pass to unix socket will FAIL.
+# We should probably bind to BOTH or update Nginx.
+# However, the previous 'Despliegue' had Nginx -> Unix Socket.
+# The 'Ampliación' instructions might be simplifying or implying a standalone run?
+# "Y el resto sería proceder tal y como hemos hecho".
+# If I change to TCP bind, I MUST update Nginx or bind to both.
+# Gunicorn can bind to multiple: --bind unix:/var/www/app/app.sock --bind 0.0.0.0:5000
+ExecStart=/var/www/app/.venv/bin/gunicorn --workers 4 --bind unix:/var/www/app/app.sock --bind 0.0.0.0:5000 wsgi:app
+
+[Install]
+WantedBy=multi-user.target
